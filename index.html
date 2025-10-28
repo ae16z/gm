@@ -1,192 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GM - Base Network</title>
-
-  <!-- ✅ FIX: pakai CDN ethers.js yang stabil -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"
-    integrity="sha512-T6zKuA0iZ9KkC8DffO47rRH1uPZ9iF6kIetwX/vz3ZkkpKhPkbUPGthPw75ci0Bo1bUAwFJqAr3I/rd5Sbs2vQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dApp Example | ethers.js</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
   <style>
-    /* gaya sama seperti sebelumnya */
-    * { margin:0; padding:0; box-sizing:border-box; }
     body {
-      font-family:'Inter',sans-serif;
-      background:linear-gradient(135deg,#667eea,#764ba2);
-      min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;
+      font-family: Arial, sans-serif;
+      background: #0a0a0a;
+      color: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
     }
-    .container{max-width:500px;width:100%;background:white;border-radius:20px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);overflow:hidden;}
-    .header{background:linear-gradient(135deg,#f093fb,#f5576c);padding:30px 20px;text-align:center;color:white;}
-    .header h1{font-size:2.5rem;font-weight:800;margin-bottom:10px;text-shadow:0 2px 4px rgba(0,0,0,0.1);}
-    .header p{font-size:1.1rem;opacity:.9;font-weight:300;}
-    .content{padding:30px;}
-    .status-card{background:#f8fafc;border:2px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:25px;text-align:center;}
-    .status-card h3{font-size:1.2rem;color:#1e293b;margin-bottom:10px;font-weight:600;}
-    .status-card p{font-size:.9rem;color:#64748b;}
-    .gm-status{font-size:1.5rem;font-weight:700;margin:15px 0;padding:12px;border-radius:12px;background:linear-gradient(135deg,#10b981,#059669);color:white;display:inline-block;min-width:200px;}
-    .gm-status.not-sent{background:linear-gradient(135deg,#ef4444,#dc2626);}
-    .wallet-info{background:#f1f5f9;border-radius:12px;padding:15px;margin:15px 0;font-size:.9rem;color:#475569;}
-    .wallet-info .address{font-family:monospace;font-size:.8rem;word-break:break-all;background:#e2e8f0;padding:8px;border-radius:8px;margin-top:5px;}
-    .btn{width:100%;padding:16px;border:none;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:.3s;margin-top:10px;}
-    .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:white;box-shadow:0 4px 15px rgba(102,126,234,.4);}
-    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,.6);}
-    .gm-btn{background:linear-gradient(135deg,#10b981,#059669);color:white;}
-    .gm-btn:hover:not(:disabled){transform:translateY(-2px);}
-    .error{background:#fee2e2;color:#dc2626;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #fecaca;}
-    .success{background:#d1fae5;color:#065f46;padding:12px;border-radius:8px;margin:15px 0;border:1px solid #a7f3d0;}
-    .network-info{text-align:center;margin-top:20px;padding:15px;background:#f8fafc;border-radius:12px;border:2px solid #dbeafe;}
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #0070f3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    input {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      width: 250px;
+    }
+    .container {
+      text-align: center;
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>GM</h1>
-      <p>Daily GM on Base Network</p>
-    </div>
-    <div class="content">
-      <div class="network-info">
-        <h4>Base Network</h4>
-        <p>Chain ID: 8453</p>
-      </div>
+    <h2>🦊 Simple dApp (ethers.js)</h2>
 
-      <div class="status-card">
-        <h3>Your Daily GM Status</h3>
-        <div id="gmStatus" class="gm-status not-sent">GM</div>
-        <p id="lastGmTime">Last GM: Never</p>
-      </div>
+    <button id="connectButton">Connect Wallet</button>
+    <p id="walletAddress">Wallet: -</p>
+    <p id="walletBalance">Balance: -</p>
 
-      <div id="walletInfo" class="wallet-info" style="display:none;">
-        <strong>Connected Wallet:</strong>
-        <div id="walletAddress" class="address"></div>
-      </div>
+    <hr />
 
-      <div id="messageContainer"></div>
-
-      <button id="connectBtn" class="btn btn-primary">Connect Wallet</button>
-      <button id="gmBtn" class="btn gm-btn" style="display:none;" disabled>Send Daily GM</button>
-    </div>
+    <h3>Send ETH</h3>
+    <input type="text" id="toAddress" placeholder="Recipient address (0x...)" /><br />
+    <input type="number" id="amountEth" placeholder="Amount (ETH)" /><br />
+    <button id="sendButton">Send</button>
   </div>
 
   <script>
-    const CONTRACT_ADDRESS = "0x1e87B0f7F71B2c217dc68004e4fc81c27C44a651";
-    const CONTRACT_ABI = [
-      "function sendGM()",
-      "function hasSentGMToday(address user) view returns (bool)",
-      "function getLastGMTimestamp(address user) view returns (uint256)"
-    ];
-
-    let provider, signer, contract, currentAccount;
-
-    const connectBtn = document.getElementById('connectBtn');
-    const gmBtn = document.getElementById('gmBtn');
-    const gmStatus = document.getElementById('gmStatus');
-    const lastGmTime = document.getElementById('lastGmTime');
-    const walletInfo = document.getElementById('walletInfo');
-    const walletAddress = document.getElementById('walletAddress');
-    const messageContainer = document.getElementById('messageContainer');
-
-    function showMessage(text, type) {
-      messageContainer.innerHTML = `<div class="${type}">${text}</div>`;
-      setTimeout(() => (messageContainer.innerHTML = ""), 5000);
-    }
+    let provider, signer;
 
     async function connectWallet() {
-      try {
-        if (!window.ethereum) {
-          showMessage("Please install MetaMask", "error");
-          return;
-        }
-
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        currentAccount = await signer.getAddress();
-
-        // ✅ Auto-switch ke Base chain
-        const baseChainId = "0x2105"; // 8453
-        const network = await provider.getNetwork();
-        if (network.chainId !== 8453) {
-          try {
-            await window.ethereum.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: baseChainId }],
-            });
-            showMessage("Switched to Base network", "success");
-          } catch (err) {
-            showMessage("Please switch to Base network manually", "error");
-            return;
-          }
-        }
-
-        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-        walletAddress.textContent = currentAccount;
-        walletInfo.style.display = "block";
-        connectBtn.style.display = "none";
-        gmBtn.style.display = "block";
-
-        await checkGMStatus();
-      } catch (err) {
-        console.error("Connection error:", err);
-        showMessage(`Failed to connect wallet: ${err.message}`, "error");
-      }
-    }
-
-    async function checkGMStatus() {
-      if (!contract || !currentAccount) return;
-      const hasSent = Math.random() > 0.5; // demo only
-
-      if (hasSent) {
-        gmStatus.textContent = "GM Sent Today! 🌅";
-        gmStatus.className = "gm-status";
-        lastGmTime.textContent = `Last GM: ${new Date().toLocaleTimeString()}`;
-        gmBtn.disabled = true;
-      } else {
-        gmStatus.textContent = "GM Not Sent Today";
-        gmStatus.className = "gm-status not-sent";
-        gmBtn.disabled = false;
-      }
-    }
-
-    async function sendGM() {
-      if (!contract) {
-        showMessage("Contract not initialized", "error");
+      if (!window.ethereum) {
+        alert("MetaMask not detected!");
         return;
       }
 
-      gmBtn.disabled = true;
-      gmBtn.innerHTML = '<div class="loading"></div> Sending...';
-      await new Promise(r => setTimeout(r, 2000)); // simulate tx
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
 
-      gmStatus.textContent = "GM Sent Today! 🌅";
-      gmStatus.className = "gm-status";
-      lastGmTime.textContent = `Last GM: ${new Date().toLocaleTimeString()}`;
-      gmBtn.textContent = "GM Sent!";
-      showMessage("GM sent successfully! 🌞", "success");
+      const address = await signer.getAddress();
+      document.getElementById("walletAddress").textContent = `Wallet: ${address}`;
+
+      const balance = await provider.getBalance(address);
+      document.getElementById("walletBalance").textContent =
+        `Balance: ${ethers.formatEther(balance)} ETH`;
     }
 
-    connectBtn.onclick = connectWallet;
-    gmBtn.onclick = sendGM;
+    async function sendEth() {
+      const to = document.getElementById("toAddress").value.trim();
+      const amount = document.getElementById("amountEth").value;
 
-    window.addEventListener("load", () => {
-      if (window.ethereum) provider = new ethers.providers.Web3Provider(window.ethereum);
-      else showMessage("Please install MetaMask", "error");
-    });
-
-    window.ethereum?.on("chainChanged", () => window.location.reload());
-    window.ethereum?.on("accountsChanged", (accounts) => {
-      if (accounts.length === 0) {
-        walletInfo.style.display = "none";
-        connectBtn.style.display = "block";
-        gmBtn.style.display = "none";
-      } else {
-        currentAccount = accounts[0];
-        walletAddress.textContent = currentAccount;
-        checkGMStatus();
+      if (!to || !amount) {
+        alert("Please fill all fields!");
+        return;
       }
-    });
+
+      try {
+        const tx = await signer.sendTransaction({
+          to,
+          value: ethers.parseEther(amount),
+        });
+        alert(`Transaction sent! Hash: ${tx.hash}`);
+      } catch (err) {
+        alert("Transaction failed: " + err.message);
+      }
+    }
+
+    document.getElementById("connectButton").onclick = connectWallet;
+    document.getElementById("sendButton").onclick = sendEth;
   </script>
 </body>
 </html>
