@@ -117,50 +117,36 @@
             padding: 16px;
             border: none;
             border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            font-size: 1.3rem;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
             margin-top: 10px;
+            letter-spacing: 1px;
         }
 
-        .btn-primary {
+        .btn-gm {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-primary:hover {
+        .btn-gm:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
-        .btn-primary:disabled {
+        .btn-gm:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
 
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #475569;
-            border: 2px solid #e2e8f0;
-        }
-
-        .btn-secondary:hover {
-            background: #e2e8f0;
-        }
-
-        .gm-btn {
+        .btn-sent {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
             box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-        }
-
-        .gm-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
         }
 
         .loading {
@@ -225,6 +211,9 @@
             .content {
                 padding: 20px;
             }
+            .btn {
+                font-size: 1.2rem;
+            }
         }
     </style>
 </head>
@@ -232,7 +221,7 @@
     <div class="container">
         <div class="header">
             <h1>GM</h1>
-            <p>Daily GM on Base Network</p>
+            <p>Daily Good Morning on Base Network</p>
         </div>
         <div class="content">
             <div class="network-info">
@@ -242,7 +231,7 @@
 
             <div class="status-card">
                 <h3>Your Daily GM Status</h3>
-                <div id="gmStatus" class="gm-status not-sent">GM</div>
+                <div id="gmStatus" class="gm-status not-sent">GM Not Sent Today</div>
                 <p id="lastGmTime">Last GM: Never</p>
             </div>
 
@@ -253,14 +242,13 @@
 
             <div id="messageContainer"></div>
 
-            <button id="connectBtn" class="btn btn-primary">Connect Wallet</button>
-            <button id="gmBtn" class="btn gm-btn" style="display: none;" disabled>Send Daily GM</button>
+            <button id="gmBtn" class="btn btn-gm">GM</button>
         </div>
     </div>
 
     <script>
         // Contract address and ABI (mock for demo)
-        const CONTRACT_ADDRESS = "0x1e87B0f7F71B2c217dc68004e4fc81c27C44a6510000";
+        const CONTRACT_ADDRESS = "0x1e87B0f7F71B2c217dc68004e4fc81c27C44a651";
         const CONTRACT_ABI = [
             "function sendGM()",
             "function hasSentGMToday(address user) view returns (bool)",
@@ -271,8 +259,8 @@
         let signer = null;
         let contract = null;
         let currentAccount = null;
+        let isConnected = false;
 
-        const connectBtn = document.getElementById('connectBtn');
         const gmBtn = document.getElementById('gmBtn');
         const gmStatus = document.getElementById('gmStatus');
         const lastGmTime = document.getElementById('lastGmTime');
@@ -282,45 +270,76 @@
 
         // Initialize
         async function init() {
-            if (window.ethereum) {
+            if (typeof window.ethereum !== 'undefined') {
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 try {
                     // Check if already connected
                     const accounts = await provider.listAccounts();
                     if (accounts.length > 0) {
-                        await connectWallet();
+                        await setupWallet(accounts[0]);
                     }
                 } catch (error) {
                     console.log("No accounts connected initially");
                 }
             } else {
                 showMessage("Please install MetaMask or another Ethereum wallet", "error");
+                gmBtn.textContent = "Install Wallet";
+                gmBtn.disabled = true;
             }
         }
 
-        async function connectWallet() {
+        async function setupWallet(account) {
             try {
-                // Request account access
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                currentAccount = account;
                 signer = provider.getSigner();
-                currentAccount = await signer.getAddress();
-                
-                // Setup contract
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
                 
                 // Update UI
                 walletAddress.textContent = currentAccount;
                 walletInfo.style.display = 'block';
-                connectBtn.style.display = 'none';
-                gmBtn.style.display = 'block';
+                isConnected = true;
                 
                 // Check GM status
                 await checkGMStatus();
                 
             } catch (error) {
-                console.error("Connection error:", error);
-                showMessage("Failed to connect wallet", "error");
+                console.error("Setup wallet error:", error);
+                showMessage("Wallet setup failed. Please try again.", "error");
             }
+        }
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error("No Ethereum wallet detected");
+                }
+
+                // Request account access
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                if (accounts.length === 0) {
+                    throw new Error("No accounts returned");
+                }
+                
+                await setupWallet(accounts[0]);
+                
+            } catch (error) {
+                console.error("Connection error:", error);
+                
+                // Handle specific error cases
+                if (error.code === 4001) {
+                    // User rejected the request
+                    showMessage("You rejected the connection request", "error");
+                } else if (error.message?.includes("No Ethereum wallet")) {
+                    showMessage("Please install MetaMask or another Ethereum wallet", "error");
+                    gmBtn.textContent = "Install Wallet";
+                    gmBtn.disabled = true;
+                } else {
+                    showMessage("Connection failed. Please try again or check your wallet.", "error");
+                }
+                return false;
+            }
+            return true;
         }
 
         async function checkGMStatus() {
@@ -335,11 +354,15 @@
                     gmStatus.textContent = "GM Sent Today! 🌅";
                     gmStatus.className = "gm-status";
                     lastGmTime.textContent = `Last GM: ${new Date().toLocaleTimeString()}`;
+                    gmBtn.textContent = "GM Sent!";
+                    gmBtn.className = "btn btn-sent";
                     gmBtn.disabled = true;
                 } else {
                     gmStatus.textContent = "GM Not Sent Today";
                     gmStatus.className = "gm-status not-sent";
                     lastGmTime.textContent = "Last GM: Never";
+                    gmBtn.textContent = "GM";
+                    gmBtn.className = "btn btn-gm";
                     gmBtn.disabled = false;
                 }
                 
@@ -351,6 +374,16 @@
 
         async function sendGM() {
             try {
+                if (!isConnected) {
+                    // Connect wallet first
+                    const connected = await connectWallet();
+                    if (!connected) {
+                        return;
+                    }
+                    // If connection successful, the button state will be updated by checkGMStatus
+                    return;
+                }
+
                 if (!contract) {
                     showMessage("Contract not initialized", "error");
                     return;
@@ -370,8 +403,9 @@
                 gmStatus.textContent = "GM Sent Today! 🌅";
                 gmStatus.className = "gm-status";
                 lastGmTime.textContent = `Last GM: ${new Date().toLocaleTimeString()}`;
-                gmBtn.disabled = true;
                 gmBtn.textContent = "GM Sent!";
+                gmBtn.className = "btn btn-sent";
+                gmBtn.disabled = true;
                 
                 showMessage("GM sent successfully! Have a great day! 🌞", "success");
                 
@@ -379,7 +413,8 @@
                 console.error("Error sending GM:", error);
                 showMessage("Failed to send GM. Please try again.", "error");
                 gmBtn.disabled = false;
-                gmBtn.textContent = "Send Daily GM";
+                gmBtn.textContent = "GM";
+                gmBtn.className = "btn btn-gm";
             }
         }
 
@@ -394,34 +429,39 @@
             }, 5000);
         }
 
-        // Event Listeners
-        connectBtn.addEventListener('click', connectWallet);
+        // Event Listener
         gmBtn.addEventListener('click', sendGM);
 
         // Initialize when page loads
         window.addEventListener('load', init);
 
         // Handle chain changed
-        window.ethereum?.on('chainChanged', (chainId) => {
-            window.location.reload();
-        });
+        if (window.ethereum) {
+            window.ethereum.on('chainChanged', (chainId) => {
+                window.location.reload();
+            });
 
-        // Handle accounts changed
-        window.ethereum?.on('accountsChanged', (accounts) => {
-            if (accounts.length === 0) {
-                // User disconnected
-                walletInfo.style.display = 'none';
-                connectBtn.style.display = 'block';
-                gmBtn.style.display = 'none';
-                gmStatus.textContent = "GM Not Sent Today";
-                gmStatus.className = "gm-status not-sent";
-                lastGmTime.textContent = "Last GM: Never";
-            } else {
-                currentAccount = accounts[0];
-                walletAddress.textContent = currentAccount;
-                checkGMStatus();
-            }
-        });
+            // Handle accounts changed
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    // User disconnected
+                    walletInfo.style.display = 'none';
+                    isConnected = false;
+                    gmStatus.textContent = "GM Not Sent Today";
+                    gmStatus.className = "gm-status not-sent";
+                    lastGmTime.textContent = "Last GM: Never";
+                    gmBtn.textContent = "GM";
+                    gmBtn.className = "btn btn-gm";
+                    gmBtn.disabled = false;
+                } else {
+                    currentAccount = accounts[0];
+                    walletAddress.textContent = currentAccount;
+                    isConnected = true;
+                    checkGMStatus();
+                }
+            });
+        }
     </script>
 </body>
 </html>
+
